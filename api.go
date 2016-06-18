@@ -1,4 +1,4 @@
-package mysql
+package db
 
 import (
     "database/sql"
@@ -14,11 +14,14 @@ import (
 )
 
 var (
+    //连接池
     db *sql.DB
+    //数据库名
     db_name string
 )
 
 var (
+    //空指针错误
     ErrNilPtr = fmt.Errorf("db: destination pointer is nil")
 )
 
@@ -897,7 +900,7 @@ func (t Table) Del(args ...interface{}) (int64, error) {
         listparam = append(listparam, args[i])
     }
 
-    res, err := Exec(fmt.Sprintf("%s WHERE %s", t.sqlDelete, strings.Join(listwhere, " AND ")), listparam...)
+    res, err := Exec(fmt.Sprintf("%s WHERE %s LIMIT 1", t.sqlDelete, strings.Join(listwhere, " AND ")), listparam...)
     if err != nil {
         return -1, err
     }
@@ -1008,6 +1011,22 @@ func (t *Table) Update(args ...interface{}) *Setter {
         listparam = append(listparam, args[i])
     }
     query := fmt.Sprintf("WHERE %s limit 1", strings.Join(listwhere, " AND "))
+    return &Setter{
+        t:t, query:query, args:listparam,
+    }
+}
+
+func (t *Table) UpdateMany(args ...interface{}) *Setter {
+    listwhere := make([]string, 0)
+    listparam := make([]interface{}, 0)
+    for i := range args {
+        if args[i] == nil {
+            continue
+        }
+        listwhere = append(listwhere, t.Fields[i].FullName+"=?")
+        listparam = append(listparam, args[i])
+    }
+    query := fmt.Sprintf("WHERE %s", strings.Join(listwhere, " AND "))
     return &Setter{
         t:t, query:query, args:listparam,
     }
